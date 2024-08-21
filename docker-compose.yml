@@ -1,0 +1,63 @@
+services:
+  express:
+    image: express
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      RADIS_URL: redis://redis:6379
+      DATABASE_URL: mysql://prisma:prisma@mysql:3306/users
+      PORT: 3000
+    depends_on:
+      - redis
+      - mysql
+    restart: "on-failure"
+    # ports:
+    #   - 3000:3000
+
+  mysql:
+    image: mysql:8.0
+    command: --lower_case_table_names=1
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=users
+      - MYSQL_USER=prisma
+      - MYSQL_PASSWORD=prisma
+    ports:
+      - '3306:3306'
+    healthcheck:
+      test: [ 'CMD', 'mysqladmin', 'ping', '-h127.0.0.1', '-P3306' ]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: prisma
+      PMA_PASSWORD: prisma
+
+  redis:
+    image: redis:latest
+    container_name: redis-container
+    ports:
+      - "6379:6379"
+
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+    depends_on:
+      - express
+    ports:
+      - 3000:3000
+
+volumes:
+  db_data:
+
+
